@@ -1,0 +1,11 @@
+[package]
+name = "rust-matrix"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rand = "0.10.4"
+
+[[bin]]
+name = "rust-matrix"
+path = "main.rs"
