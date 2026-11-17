@@ -2,52 +2,65 @@
 #include <string>
 #include <dirent.h> //디렉토리 관련 함수들을 제공하는 헤더 파일
 #include <sys/stat.h> //파일 정보를 가져오는 함수들을 제공하는 헤더 파일
+#include <vector> //벡터 컨테이너를 제공하는 헤더 파일
+#include <algorithm> //알고리즘 관련 함수들을 제공하는 헤더 파일
 
 
-void list_directory(const std::string& path){
+void list_directory(const std::string& path) {
 
-    DIR * dir = opendir(path.c_str());
+    DIR* dir = opendir(path.c_str());
 
-    if(dir == nullptr){
-        std::cerr << path << "경로 디렉토리 열기 실패\n";
+    if (dir == nullptr) {
+        std::cerr << path << " 열기 실패\n";
         return;
     }
 
-    struct dirent * entry;
-    
-    while((entry = readdir(dir)) != nullptr){
-        std::string name = entry -> d_name;
-        
+    struct dirent* entry;
+    std::vector<std::string> names;
 
-        if(name == "." || name == ".."){
+    //  모든 항목 수집
+    while ((entry = readdir(dir)) != nullptr) {
+
+        std::string name = entry->d_name;
+
+        // ls 기본 동작처럼 숨김 파일 제외
+        if (name[0] == '.') {
             continue;
         }
 
-        std::cout << "이름 :"<< entry -> d_name << "\n";
-        std::cout << "inode: " << entry->d_ino << "\n";
-        std::cout << "offset: " << entry->d_off << "\n";
-        std::cout << "record length: " << entry->d_reclen << "\n";
-        std::cout << "type: " << static_cast<int>(entry->d_type) << "\n";
-        std::cout << "---------------------\n";
+        names.push_back(name);
+    }
+
+    closedir(dir);
+
+    //  파일명 정렬
+    std::sort(names.begin(), names.end());
+
+    //  현재 디렉토리 출력
+    std::cout << path << ":\n";
+
+    for (const auto& name : names) {
+        std::cout << name << "  ";
+    }
+
+    std::cout << "\n\n";
+
+    //  하위 디렉토리 탐색
+    for (const auto& name : names) {
 
         std::string full_path = path + "/" + name;
 
         struct stat info;
 
-        if(lstat(full_path.c_str(), &info) == -1){
-            std::cerr << "파일 정보 가져오기 실패\n";
+        if (lstat(full_path.c_str(), &info) == -1) {
+            std::cerr << full_path << " 정보 조회 실패\n";
             continue;
         }
 
-        if(S_ISDIR(info.st_mode)){
-            
+        if (S_ISDIR(info.st_mode)) {
             list_directory(full_path);
         }
-
     }
-
-    closedir(dir);
-
 }
 
 int main(int argc , char* argv[]){
