@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <chrono>
+
 int main(int argc , char* argv[]){
     std::string sentence = "The quick brown fox";
     std::string input;
@@ -8,8 +10,14 @@ int main(int argc , char* argv[]){
     int errors = 0;
 
     std::cout << "연습문장:" << sentence << "\n";
+
+    auto start = std::chrono::steady_clock::now();
+
     std::cout << "입력: ";
     std::getline(std::cin, input);
+
+    auto end = std::chrono::steady_clock::now();
+
     std::cout << input << "\n" ;
     
     //두 문자열 중 더 작은 문자 찾기
@@ -34,7 +42,20 @@ int main(int argc , char* argv[]){
     }else 
         std::cout << "문자수가 동일합니다." << "\n";
     
-    std::cout << errors;
 
+    std::chrono::duration<double> elapsed = end - start;
+    double seconds = elapsed.count();
+    
+    double cpm = 0.0;
+
+    if(seconds > 0.0){
+        cpm = input.size() / seconds * 60 ;
+    }
+
+
+    std::cout << "측정 시간 :" << seconds << "\n";
+    std::cout << "cpm : " << cpm << "\n";
+    std::cout << "오타 횟수 :" << errors;
+    
     return 0;
 }
