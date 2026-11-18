@@ -1,61 +1,110 @@
+
 #include <iostream>
+#include <fcntl.h>
+#include <unistd.h>
 #include <string>
 #include <algorithm>
 #include <chrono>
+#include <vector>
+#include <cstdio>
 
-int main(int argc , char* argv[]){
-    std::string sentence = "The quick brown fox";
-    std::string input;
+int main(int argc, char* argv[]) {
+
+    char ch;
+    std::vector<std::string> sentences;
+    std::vector<std::string> inputs;
 
     int errors = 0;
+    std::string sentence;
 
-    std::cout << "연습문장:" << sentence << "\n";
+    int fd = open("sentences.txt", O_RDONLY);
 
-    auto start = std::chrono::steady_clock::now();
+    if (fd == -1) {
+        perror("open");
+        return 1;
+    }
 
-    std::cout << "입력: ";
-    std::getline(std::cin, input);
+    // 파일에서 문장 읽기
+    ssize_t n;
 
-    auto end = std::chrono::steady_clock::now();
-
-    std::cout << input << "\n" ;
-    
-    //두 문자열 중 더 작은 문자 찾기
-    std::size_t min_length = std::min(sentence.size() , input.size());
-    std::cout << min_length << "\n";
-
-    //반복문으로같은 위치의 문자 비교하기
-    for(int i = 0 ; i < min_length ; i++){
-        if(sentence[i] != input[i]){
-            errors++;
-
-            std::cout << sentence[i] << "와" << input[i]
-            << "다른문자 발견! " 
-            << "누적 에러 수: " << errors << "\n";
+    while ((n = read(fd, &ch, 1)) == 1) {
+        if (ch == '\n') {
+            sentences.push_back(sentence);
+            sentence.clear();
+        } else {
+            sentence.push_back(ch);
         }
     }
 
-    if(sentence.size() > input.size() ){
-        errors += sentence.size() - input.size();
-    }else if(sentence.size() < input.size()){
-        errors += input.size() - sentence.size();
-    }else 
-        std::cout << "문자수가 동일합니다." << "\n";
-    
+    if (n == -1) {
+        perror("read");
+        close(fd);
+        return 1;
+    }
+
+    if (!sentence.empty()) {
+        sentences.push_back(sentence);
+    }
+
+    close(fd);
+
+    // 입력받을 문자열 공간 확보
+    inputs.resize(sentences.size());
+
+    std::size_t all_input_size = 0;
+
+    auto start = std::chrono::steady_clock::now();
+
+    // 문장별 타자 연습
+    for (std::size_t i = 0; i < sentences.size(); i++) {
+
+        std::cout << sentences[i] << "\n";
+
+        if (!std::getline(std::cin, inputs[i])) {
+            std::cerr << "입력 오류\n";
+            return 1;
+        }
+
+        all_input_size += inputs[i].size();
+
+        std::size_t min_length =
+            std::min(sentences[i].size(), inputs[i].size());
+
+        // 같은 위치의 문자 비교
+        for (std::size_t j = 0; j < min_length; j++) {
+
+            if (sentences[i][j] != inputs[i][j]) {
+                errors++;
+
+                std::cout << sentences[i][j] << "와 "
+                          << inputs[i][j]
+                          << " 다른 문자 발견! "
+                          << "누적 에러 수: " << errors << "\n";
+            }
+        }
+
+        // 길이 차이 계산 (문장당 한 번)
+        if (sentences[i].size() > inputs[i].size()) {
+            errors += sentences[i].size() - inputs[i].size();
+        } else if (sentences[i].size() < inputs[i].size()) {
+            errors += inputs[i].size() - sentences[i].size();
+        }
+    }
+
+    auto end = std::chrono::steady_clock::now();
 
     std::chrono::duration<double> elapsed = end - start;
     double seconds = elapsed.count();
-    
+
     double cpm = 0.0;
 
-    if(seconds > 0.0){
-        cpm = input.size() / seconds * 60 ;
+    if (seconds > 0.0) {
+        cpm = all_input_size / seconds * 60.0;
     }
 
+    std::cout << "\n측정 시간: " << seconds << "초\n";
+    std::cout << "CPM: " << cpm << "\n";
+    std::cout << "오타 횟수: " << errors << "\n";
 
-    std::cout << "측정 시간 :" << seconds << "\n";
-    std::cout << "cpm : " << cpm << "\n";
-    std::cout << "오타 횟수 :" << errors;
-    
     return 0;
 }
