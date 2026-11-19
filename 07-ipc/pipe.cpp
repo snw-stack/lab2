@@ -5,52 +5,81 @@
 
 int main() {
 
-    int fd[2];
+    int parentToChild[2];
+    int childToParent[2];
 
-    if (pipe(fd) == -1) {
+    if (pipe(parentToChild) == -1) {
+        std::perror("pipe 실패");
+        return 1;
+    }
+    if (pipe(childToParent) == -1) {
         std::perror("pipe 실패");
         return 1;
     }
 
-    pid_t result = fork();
 
-    if (result == -1) {
+    pid_t pid = fork();
+
+    if (pid == -1) {
         std::perror("fork 실패");
-        close(fd[0]);
-        close(fd[1]);
+        close(parentToChild[0]); //부모 -> 자식 읽기
+        close(parentToChild[1]); //부모 -> 자식 쓰기
+        close(childToParent[0]); //자식 -> 부모 읽기
+        close(childToParent[1]); //자식 -> 부모 쓰기
         return 1;
     }
+    
+    if(pid > 0 ){
+        std::cout << "부모 프로세스 실행" << '\n';  
 
-    if (result == 0) {
-        std::cout << "자식프로세스 실행\n";
+        close(childToParent[1]); //자식 -> 부모 쓰기
+        close(parentToChild[0]); //부모 -> 자식 읽기
 
-        close(fd[0]);  // 읽기용 닫기
-
-        const char message[] = "Hello parent!";
-
-        write(fd[1], message, sizeof(message) - 1);
-
-        close(fd[1]);  // 쓰기용 닫기
-
-    } else {
-        std::cout << "부모프로세스 실행\n";
-
-        close(fd[1]);  // 쓰기용 닫기
+        const char message[] = "Hello child!";
+        write(parentToChild[1] , message , sizeof(message)-1 ); //부모 -> 자식 쓰기
 
         char buffer[100]{};
+        
+        ssize_t n = read(childToParent[0], buffer, sizeof(buffer)-1); //자식 -> 부모 읽기
 
-        ssize_t n = read(fd[0], buffer, sizeof(buffer) - 1);
-
-        if (n == -1) {
-            std::perror("read 실패");
-        } else if (n > 0) {
+        if(n == -1){
+            std::cerr << "read 실패" << '\n';
+        }else if(n == 0){
+            std::cerr << "데이터 없음, 모든 쓰기 끝 닫힘"<< '\n';
+        }else if(n > 0){
             buffer[n] = '\0';
-            std::cout << buffer << "\n";
+            std::cout << buffer << '\n';
         }
-        close(fd[0]);  // 읽기용 닫기
 
-        waitpid(result, nullptr, 0);
+        close(parentToChild[1]);
+        close(childToParent[0]);
+        
+        waitpid(pid,nullptr , 0);
+    }else if(pid == 0){
+        std::cout << "자식 프로세스 실행" << '\n'; 
+
+        close(childToParent[0]); //자식 -> 부모 쓰기
+        close(parentToChild[1]); //부모 -> 자식 읽기
+
+        const char reply[] = "Hello parent!";
+        write(childToParent[1] , reply , sizeof(reply)-1 ); //부모 -> 자식 쓰기
+
+        char buffer[100]{};
+        
+        ssize_t n = read(parentToChild[0], buffer, sizeof(buffer)-1); //자식 -> 부모 읽기
+
+        if(n == -1){
+            std::cerr << "read 실패" << '\n';
+        }else if(n == 0){
+            std::cerr << "데이터 없음, 모든 쓰기 끝 닫힘"<< '\n';
+        }else if(n > 0){
+            buffer[n] = '\0';
+            std::cout << buffer << '\n';
+        }
+    
+        close(parentToChild[0]); 
+        close(childToParent[1]); 
+        
     }
-
     return 0;
 }
