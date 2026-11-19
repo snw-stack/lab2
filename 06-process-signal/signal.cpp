@@ -2,8 +2,9 @@
 #include <unistd.h>
 #include <signal.h>
 #include <cstdio>
+#include<sys/wait.h>
 void handler(int signo){
-    const char message[] = "\nSIGINT 수신!\n";
+    const char message[] = "SIGUSR1 수신!\n";
     write(STDOUT_FILENO , message , sizeof(message)-1);
 }
 
@@ -29,16 +30,39 @@ int main(int argc , char* argv[]) {
     act.sa_flags = 0;
 
     
-    if(sigaction(SIGINT, &act , nullptr) == -1){
+    if(sigaction(SIGUSR1, &act , nullptr) == -1){
         std::perror("시그널 실패");
         return -1;
     }
 
-    std::cout << "시그널 대기 중...\n";
+    pid_t result = fork();
 
-    while(true){
-        pause();
+
+    if(result == -1){
+        std::cerr << "fore실패\n";
+        return -1;
     }
+
+
+    if(result > 0){
+        std::cout << "부모 프로세스 실행" 
+            << getpid() << "\n";
+
+        sleep(1);
+
+        kill(result,SIGUSR1);
+        waitpid(result,nullptr,0);
+    }else{
+        std::cout<< "자식 프로세스 실행" 
+            << getpid() << '\n';
     
+        for(int i =0; i < 5; i++){
+            sleep(1);
+        }
+
+        std::cout << "(자식) 작업 종료\n";
+
+    }
+
     return 0;
 }
