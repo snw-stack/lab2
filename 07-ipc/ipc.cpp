@@ -13,12 +13,29 @@ int main(int argc , char* argv[]){
         return -1;
     }
     
-     std::cout << "PID " << getpid()
+    if(argc != 2){
+        std::cerr << " 사용법 ./flock_test shared 또는 exclusive\n";
+        return -1;
+    }
+
+    std::string mode = argv[1];
+    int lockType;
+
+    if(mode == "shared"){
+        lockType = LOCK_SH;
+    }else if(mode == "exclusive"){
+        lockType = LOCK_EX;
+    }else{
+        std::cerr << "오류";
+        return -1;
+    }
+
+
+    std::cout << "PID " << getpid()
               << ": 잠금 요청\n" << std::flush;
 
-    flock(fd , LOCK_EX);
-    // flock()으로 LOCK_EX 잠금 획득
-    // 오류 발생 시 처리하기
+    flock(fd , lockType);
+
 
     std::cout << "PID " << getpid()
               << ": 잠금 획득!\n" << std::flush;
