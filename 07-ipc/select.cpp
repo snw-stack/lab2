@@ -51,7 +51,7 @@ int main(){
 
         char buffer[100]{};
 
-        std::cout << "읽을 수신 대기" << '\n';
+
 
         int ready = select(
             fd[0]+1 , 
@@ -84,7 +84,7 @@ int main(){
             }
             
         }
-        
+
         close(fd[0]);
 
         waitpid(pid,nullptr , 0);
